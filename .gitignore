@@ -1,0 +1,6 @@
+# Binary
+chaparral
+dist/
+
+# OS
+.DS_Store
