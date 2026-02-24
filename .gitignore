@@ -1,6 +1,7 @@
 # Binary
-chaparral
+/chaparral
 dist/
 
 # OS
 .DS_Store
+.planning/
