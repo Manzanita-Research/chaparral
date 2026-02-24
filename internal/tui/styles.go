@@ -1,8 +1,12 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"os"
 
-// Warm, muted palette — terracotta, sage, ochre, cream, rust.
+	"github.com/charmbracelet/lipgloss"
+)
+
+// Warm, muted palette — terracotta, sage, ochre, cream, rust, fog, lavender.
 var (
 	colorTerracotta = lipgloss.Color("#C2704E")
 	colorSage       = lipgloss.Color("#8B9F7B")
@@ -12,6 +16,8 @@ var (
 	colorRedwood    = lipgloss.Color("#6B3A2A")
 	colorMuted      = lipgloss.Color("#8B7D6B")
 	colorDim        = lipgloss.Color("#6B6356")
+	colorFog        = lipgloss.Color("#E8E5DF")
+	colorLavender   = lipgloss.Color("#9B8EA8")
 
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -40,7 +46,16 @@ var (
 	dimStyle = lipgloss.NewStyle().
 			Foreground(colorDim)
 
+	lavenderStyle = lipgloss.NewStyle().
+			Foreground(colorLavender)
+
 	statusLinked  = skillLinked.Render("●")
 	statusMissing = skillMissing.Render("○")
 	statusStale   = skillStale.Render("◐")
 )
+
+// hasNoColor checks if NO_COLOR is set in the environment.
+func hasNoColor() bool {
+	_, ok := os.LookupEnv("NO_COLOR")
+	return ok
+}
