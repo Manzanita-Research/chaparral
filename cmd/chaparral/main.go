@@ -8,6 +8,7 @@ import (
 
 	"github.com/manzanita-research/chaparral/internal/config"
 	"github.com/manzanita-research/chaparral/internal/discovery"
+	"github.com/manzanita-research/chaparral/internal/generator"
 	"github.com/manzanita-research/chaparral/internal/linker"
 	"github.com/manzanita-research/chaparral/internal/tui"
 	"github.com/manzanita-research/chaparral/internal/validator"
@@ -32,6 +33,8 @@ func main() {
 		runStatus(basePath)
 	case "validate":
 		runValidate(basePath)
+	case "generate":
+		runGenerate(basePath)
 	case "unlink":
 		runUnlink(basePath)
 	case "help", "--help", "-h":
@@ -189,6 +192,61 @@ func runValidate(basePath string) {
 	}
 }
 
+func runGenerate(basePath string) {
+	orgs := loadOrgs(basePath)
+
+	// Check for --marketplace flag
+	showMarketplace := false
+	for _, arg := range os.Args[2:] {
+		if arg == "--marketplace" {
+			showMarketplace = true
+		}
+	}
+
+	for _, org := range orgs {
+		fmt.Printf("%s\n", org.Name)
+
+		skills, err := discovery.FindSkills(org.SkillsPath())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  %v\n", err)
+			continue
+		}
+
+		if len(skills) == 0 {
+			fmt.Println("  no skills found")
+			fmt.Println()
+			continue
+		}
+
+		for _, skill := range skills {
+			data, err := generator.GeneratePluginJSON(skill)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "  %s/plugin.json — %v\n", skill.Name, err)
+				continue
+			}
+
+			fmt.Printf("  %s/plugin.json\n", skill.Name)
+			for _, line := range strings.Split(string(data), "\n") {
+				fmt.Printf("    %s\n", line)
+			}
+			fmt.Println()
+		}
+
+		if showMarketplace {
+			data, err := generator.GenerateMarketplaceJSON(org, skills)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "  marketplace.json — %v\n", err)
+			} else {
+				fmt.Println("  marketplace.json")
+				for _, line := range strings.Split(string(data), "\n") {
+					fmt.Printf("    %s\n", line)
+				}
+				fmt.Println()
+			}
+		}
+	}
+}
+
 func runUnlink(basePath string) {
 	orgs := loadOrgs(basePath)
 
@@ -219,6 +277,8 @@ usage:
   chaparral sync       link skills to all sibling repos
   chaparral status     show current link state
   chaparral validate   check skill structure for errors
+  chaparral generate   generate plugin manifests (dry run to stdout)
+    --marketplace      also generate marketplace.json catalog
   chaparral unlink     remove all managed symlinks
   chaparral help       show this message`)
 }
