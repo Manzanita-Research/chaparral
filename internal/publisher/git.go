@@ -3,19 +3,20 @@ package publisher
 import (
 	"errors"
 	"fmt"
-	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
 // ErrNoChanges is returned when CommitAndPush finds nothing to commit.
 var ErrNoChanges = errors.New("no changes to commit")
 
 // CommitAndPush stages the written files, commits with a structured message,
-// and pushes to origin. Returns ErrNoChanges if the working tree is clean.
+// and pushes to origin using system git. Returns ErrNoChanges if the working
+// tree is clean.
 func CommitAndPush(brandRepoPath string, writtenFiles []WrittenFile, version string) error {
 	repo, err := git.PlainOpen(brandRepoPath)
 	if err != nil {
@@ -50,24 +51,12 @@ func CommitAndPush(brandRepoPath string, writtenFiles []WrittenFile, version str
 		return fmt.Errorf("committing: %w", err)
 	}
 
-	// Push
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return fmt.Errorf("GITHUB_TOKEN is not set — needed to push to GitHub")
-	}
-
-	err = repo.Push(&git.PushOptions{
-		RemoteName: "origin",
-		Auth: &githttp.BasicAuth{
-			Username: "token",
-			Password: token,
-		},
-	})
+	// Push using system git — uses whatever auth the user already has configured
+	cmd := exec.Command("git", "push", "origin")
+	cmd.Dir = brandRepoPath
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			return nil
-		}
-		return fmt.Errorf("pushing: %w", err)
+		return fmt.Errorf("pushing: %s", strings.TrimSpace(string(output)))
 	}
 
 	return nil

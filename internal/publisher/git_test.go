@@ -101,9 +101,9 @@ func TestCommitAndPush_StagesAndCommits(t *testing.T) {
 		{Path: ".claude-plugin/marketplace.json", IsNew: true},
 	}, "0.1.0")
 
-	// We expect a GITHUB_TOKEN error or push error since there's no remote
+	// We expect a push error since there's no remote configured
 	if err == nil {
-		t.Fatal("expected error (no remote/token)")
+		t.Fatal("expected error (no remote)")
 	}
 
 	// Verify the commit was actually created
