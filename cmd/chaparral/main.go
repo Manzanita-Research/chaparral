@@ -285,11 +285,22 @@ func runGenerate(basePath string) {
 			continue
 		}
 
+		brandRepoPath := filepath.Join(org.Path, org.BrandRepo)
+
 		for _, skill := range skills {
 			data, err := generator.GeneratePluginJSON(skill)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  %s/plugin.json — %v\n", skill.Name, err)
 				continue
+			}
+
+			// Apply real next version (same logic as publish)
+			var manifest generator.PluginManifest
+			if err := json.Unmarshal(data, &manifest); err == nil {
+				manifest.Version = publisher.BumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
+				if bumped, err := json.MarshalIndent(manifest, "", "  "); err == nil {
+					data = bumped
+				}
 			}
 
 			fmt.Printf("  %s/plugin.json\n", skill.Name)
@@ -304,6 +315,22 @@ func runGenerate(basePath string) {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  marketplace.json — %v\n", err)
 			} else {
+				// Apply real next versions to each plugin in marketplace
+				var mkt generator.MarketplaceManifest
+				if err := json.Unmarshal(data, &mkt); err == nil {
+					for i, plugin := range mkt.Plugins {
+						for _, skill := range skills {
+							if plugin.Name == skill.Name || filepath.Base(plugin.Source) == skill.Name {
+								mkt.Plugins[i].Version = publisher.BumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
+								break
+							}
+						}
+					}
+					if bumped, err := json.MarshalIndent(mkt, "", "  "); err == nil {
+						data = bumped
+					}
+				}
+
 				fmt.Println("  marketplace.json")
 				for _, line := range strings.Split(string(data), "\n") {
 					fmt.Printf("    %s\n", line)

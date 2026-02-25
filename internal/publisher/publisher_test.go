@@ -58,7 +58,7 @@ func setupOrg(t *testing.T) (config.Org, []config.Skill) {
 
 func TestBumpVersion_NoExistingFile(t *testing.T) {
 	dir := t.TempDir()
-	version := bumpVersion(dir, ".agents/skills", "nonexistent")
+	version := BumpVersion(dir, ".agents/skills", "nonexistent")
 	if version != "0.1.0" {
 		t.Errorf("expected 0.1.0, got %s", version)
 	}
@@ -84,7 +84,7 @@ func TestBumpVersion_ExistingVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	version := bumpVersion(dir, skillsDir, skillName)
+	version := BumpVersion(dir, skillsDir, skillName)
 	if version != "0.1.3" {
 		t.Errorf("expected 0.1.3, got %s", version)
 	}
@@ -104,7 +104,7 @@ func TestBumpVersion_MalformedJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	version := bumpVersion(dir, skillsDir, skillName)
+	version := BumpVersion(dir, skillsDir, skillName)
 	if version != "0.1.0" {
 		t.Errorf("expected 0.1.0, got %s", version)
 	}

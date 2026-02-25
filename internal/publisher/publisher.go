@@ -36,7 +36,7 @@ type FreshnessResult struct {
 
 // bumpVersion reads the existing plugin.json for a skill and returns the next
 // patch version. Returns "0.1.0" if the file is missing or unparseable.
-func bumpVersion(brandRepoPath, skillsDir, skillName string) string {
+func BumpVersion(brandRepoPath, skillsDir, skillName string) string {
 	pluginPath := filepath.Join(brandRepoPath, skillsDir, skillName, "plugin.json")
 	data, err := os.ReadFile(pluginPath)
 	if err != nil {
@@ -63,7 +63,7 @@ func generateVersionedPlugin(skill config.Skill, brandRepoPath string, org confi
 		return "", fmt.Errorf("generating plugin for %s: %w", skill.Name, err)
 	}
 
-	version := bumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
+	version := BumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
 
 	var manifest generator.PluginManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
@@ -92,7 +92,7 @@ func generateVersionedMarketplace(org config.Org, skills []config.Skill, brandRe
 	for i, plugin := range marketplace.Plugins {
 		for _, skill := range skills {
 			if plugin.Name == skill.Name || filepath.Base(plugin.Source) == skill.Name {
-				version := bumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
+				version := BumpVersion(brandRepoPath, org.Manifest.SkillsDir, skill.Name)
 				marketplace.Plugins[i].Version = version
 				break
 			}
