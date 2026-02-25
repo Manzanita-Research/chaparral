@@ -13,8 +13,9 @@ The existing Chaparral tool handles local skill syncing. This milestone adds the
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Generation** - Users can validate and generate Claude Code plugin manifests from brand repo skills
-- [ ] **Phase 2: Publishing** - Users can write and push a versioned marketplace to GitHub with explicit confirmation
-- [ ] **Phase 3: Discovery and Install** - Users can see marketplace plugin status and install plugins from the TUI
+- [x] **Phase 2: Publishing** - Users can write and push a versioned marketplace to GitHub with explicit confirmation
+- [x] **Phase 3: Discovery and Install** - Users can see marketplace plugin status and install plugins from the TUI
+- [ ] **Phase 4: Polish** - Fix display bugs and UX issues found during milestone audit
 
 ## Phase Details
 
@@ -41,8 +42,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can push the marketplace to GitHub only after a two-step confirmation that shows version, target remote, and changed files
   4. User can check whether local skills are newer than the published marketplace before deciding to republish
 **Plans**: 2 plans
-- [ ] 02-01-PLAN.md — Publisher package: write manifests, diff preview, staleness check, version bumping (TDD)
-- [ ] 02-02-PLAN.md — go-git integration and `chaparral publish` command with three modes
+- [x] 02-01-PLAN.md — Publisher package: write manifests, diff preview, staleness check, version bumping (TDD)
+- [x] 02-02-PLAN.md — go-git integration and `chaparral publish` command with three modes
 
 ### Phase 3: Discovery and Install
 **Goal**: Users can see which marketplace plugins are installed across sibling repos and install plugins directly from the TUI
@@ -53,16 +54,29 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can see which plugins are available in the published marketplace from within the dashboard
   3. User can install a marketplace plugin into a sibling repo from the TUI, with full error output if the install fails
 **Plans**: 2 plans
-- [ ] 03-01-PLAN.md — Marketplace package: types, scanner, installer, and CLI status integration (TDD)
-- [ ] 03-02-PLAN.md — TUI integration: plugin display in repos tab and interactive install flow
+- [x] 03-01-PLAN.md — Marketplace package: types, scanner, installer, and CLI status integration (TDD)
+- [x] 03-02-PLAN.md — TUI integration: plugin display in repos tab and interactive install flow
+
+### Phase 4: Polish
+**Goal**: Fix display bugs and UX issues found during milestone audit
+**Depends on**: Phase 3
+**Requirements**: DISC-03, DISC-04, GEN-04 (gap closure)
+**Gap Closure:** Closes gaps from v1-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. Installed plugins show correct enabled/disabled icon in TUI (not always disabled)
+  2. TUI install targets the repo the user is browsing, not always the first repo
+  3. `chaparral generate` shows the next version that would be published, not always 0.1.0
+**Plans**: 1 plan
+- [ ] 04-01-PLAN.md — Fix enabled icon, repo cursor targeting, and version-aware generate preview
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Generation | 2/2 | Complete | 2026-02-24 |
-| 2. Publishing | 0/2 | Not started | - |
-| 3. Discovery and Install | 0/TBD | Not started | - |
+| 2. Publishing | 2/2 | Complete | 2026-02-24 |
+| 3. Discovery and Install | 2/2 | Complete | 2026-02-25 |
+| 4. Polish | 0/1 | Not started | - |
