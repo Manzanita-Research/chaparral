@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +13,7 @@ import (
 	"github.com/manzanita-research/chaparral/internal/discovery"
 	"github.com/manzanita-research/chaparral/internal/generator"
 	"github.com/manzanita-research/chaparral/internal/linker"
+	"github.com/manzanita-research/chaparral/internal/publisher"
 	"github.com/manzanita-research/chaparral/internal/tui"
 	"github.com/manzanita-research/chaparral/internal/validator"
 )
@@ -35,6 +39,8 @@ func main() {
 		runValidate(basePath)
 	case "generate":
 		runGenerate(basePath)
+	case "publish":
+		runPublish(basePath)
 	case "unlink":
 		runUnlink(basePath)
 	case "help", "--help", "-h":
@@ -269,6 +275,212 @@ func runUnlink(basePath string) {
 	}
 }
 
+func runPublish(basePath string) {
+	orgs := loadOrgs(basePath)
+
+	// Parse flags
+	checkOnly := false
+	writeOnly := false
+	for _, arg := range os.Args[2:] {
+		switch arg {
+		case "--check":
+			checkOnly = true
+		case "--write-only":
+			writeOnly = true
+		}
+	}
+
+	for _, org := range orgs {
+		fmt.Printf("%s\n", org.Name)
+
+		skills, err := discovery.FindSkills(org.SkillsPath())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  %v\n", err)
+			continue
+		}
+
+		if len(skills) == 0 {
+			fmt.Println("  no skills found")
+			fmt.Println()
+			continue
+		}
+
+		if checkOnly {
+			runPublishCheck(org, skills)
+			continue
+		}
+
+		if writeOnly {
+			runPublishWriteOnly(org, skills)
+			continue
+		}
+
+		runPublishFull(org, skills)
+	}
+}
+
+func runPublishCheck(org config.Org, skills []config.Skill) {
+	results, err := publisher.CheckFreshness(org, skills)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		return
+	}
+
+	upToDate := 0
+	for _, r := range results {
+		if r.Stale {
+			fmt.Printf("  ○ %s (stale)\n", r.Skill)
+		} else {
+			version := r.PublishedVersion
+			if version == "" {
+				version = "unpublished"
+			}
+			fmt.Printf("  ✓ %s (v%s)\n", r.Skill, version)
+			upToDate++
+		}
+	}
+	fmt.Printf("  %d of %d skills are up to date\n\n", upToDate, len(results))
+}
+
+func runPublishWriteOnly(org config.Org, skills []config.Skill) {
+	changes, err := publisher.DiffManifests(org, skills)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		return
+	}
+
+	allUnchanged := true
+	for _, c := range changes {
+		switch c.Kind {
+		case "new":
+			fmt.Printf("  + %s (new)\n", c.Path)
+			allUnchanged = false
+		case "modified":
+			fmt.Printf("  ~ %s (modified)\n", c.Path)
+			allUnchanged = false
+		default:
+			fmt.Printf("    %s (unchanged)\n", c.Path)
+		}
+	}
+
+	if allUnchanged {
+		fmt.Println("  nothing to write")
+		fmt.Println()
+		return
+	}
+
+	written, err := publisher.WriteManifests(org, skills)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		return
+	}
+	fmt.Printf("  wrote %d files\n\n", len(written))
+}
+
+func runPublishFull(org config.Org, skills []config.Skill) {
+	// Show diff preview
+	changes, err := publisher.DiffManifests(org, skills)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		return
+	}
+
+	allUnchanged := true
+	changeCount := 0
+	for _, c := range changes {
+		switch c.Kind {
+		case "new":
+			fmt.Printf("  + %s (new)\n", c.Path)
+			allUnchanged = false
+			changeCount++
+		case "modified":
+			fmt.Printf("  ~ %s (modified)\n", c.Path)
+			allUnchanged = false
+			changeCount++
+		default:
+			fmt.Printf("    %s (unchanged)\n", c.Path)
+		}
+	}
+
+	if allUnchanged {
+		fmt.Println("  already up to date — nothing to publish")
+		fmt.Println()
+		return
+	}
+
+	// Extract version from the first change's new content
+	version := extractVersion(changes)
+
+	// Get remote URL
+	brandRepoPath := filepath.Join(org.Path, org.BrandRepo)
+	remoteURL, err := publisher.RemoteURL(brandRepoPath)
+	if err != nil {
+		remoteURL = "(no remote configured)"
+	}
+
+	fmt.Println()
+	fmt.Printf("  Publish marketplace v%s to %s?\n", version, remoteURL)
+	fmt.Printf("  Files to write: %d\n\n", changeCount)
+
+	if !confirm("  Push to GitHub?") {
+		fmt.Println("  cancelled.")
+		fmt.Println()
+		return
+	}
+
+	if !confirm("  Confirm push (this will update the live marketplace):") {
+		fmt.Println("  cancelled.")
+		fmt.Println()
+		return
+	}
+
+	// Write manifests
+	written, err := publisher.WriteManifests(org, skills)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		return
+	}
+
+	// Commit and push
+	err = publisher.CommitAndPush(brandRepoPath, written, version)
+	if err != nil {
+		if errors.Is(err, publisher.ErrNoChanges) {
+			fmt.Println("  already up to date")
+			fmt.Println()
+			return
+		}
+		fmt.Fprintf(os.Stderr, "  %v\n", err)
+		fmt.Println()
+		return
+	}
+
+	fmt.Printf("  published v%s to %s\n\n", version, remoteURL)
+}
+
+// extractVersion parses the version from the first change's NewContent JSON.
+func extractVersion(changes []publisher.FileChange) string {
+	for _, c := range changes {
+		if c.Kind == "unchanged" {
+			continue
+		}
+		var pm struct {
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal([]byte(c.NewContent), &pm); err == nil && pm.Version != "" {
+			return pm.Version
+		}
+	}
+	return "0.1.0"
+}
+
+// confirm prompts the user and returns true if they type "y".
+func confirm(prompt string) bool {
+	fmt.Printf("%s [y/N] ", prompt)
+	reader := bufio.NewReader(os.Stdin)
+	line, _ := reader.ReadString('\n')
+	return strings.TrimSpace(strings.ToLower(line)) == "y"
+}
+
 func printHelp() {
 	fmt.Println(`chaparral — the connective tissue between your projects
 
@@ -279,6 +491,9 @@ usage:
   chaparral validate   check skill structure for errors
   chaparral generate   generate plugin manifests (dry run to stdout)
     --marketplace      also generate marketplace.json catalog
+  chaparral publish    write manifests and push marketplace to GitHub
+    --check            check if local skills are newer than published
+    --write-only       write manifests without pushing to GitHub
   chaparral unlink     remove all managed symlinks
   chaparral help       show this message`)
 }
