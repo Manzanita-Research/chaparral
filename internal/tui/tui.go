@@ -42,8 +42,9 @@ type Model struct {
 	orgs     []config.Org
 	statuses map[string][]linker.LinkStatus // keyed by org name
 	results  []linker.LinkResult
-	cursor   int
-	view     view
+	cursor     int
+	repoCursor int
+	view       view
 	prevView view // view to return to from help
 	tab      dashTab
 	err      error
@@ -207,15 +208,29 @@ func (m Model) updateDefault(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.tab = tabSkills
 			}
 			m.cursor = 0
+			m.repoCursor = 0
 		}
 		return m, nil
 	case "up", "k":
-		if m.view == viewDashboard && m.cursor > 0 {
-			m.cursor--
+		if m.view == viewDashboard {
+			if m.tab == tabRepos && m.repoCursor > 0 {
+				m.repoCursor--
+			} else if m.tab != tabRepos && m.cursor > 0 {
+				m.cursor--
+				m.repoCursor = 0
+			}
 		}
 	case "down", "j":
-		if m.view == viewDashboard && m.cursor < len(m.orgs)-1 {
-			m.cursor++
+		if m.view == viewDashboard {
+			if m.tab == tabRepos {
+				repoOrder := m.repoOrderForOrg(m.cursor)
+				if m.repoCursor < len(repoOrder)-1 {
+					m.repoCursor++
+				}
+			} else if m.cursor < len(m.orgs)-1 {
+				m.cursor++
+				m.repoCursor = 0
+			}
 		}
 	case "s":
 		if m.view == viewDashboard && len(m.orgs) > 0 {
@@ -289,18 +304,42 @@ func (m Model) updateInstallDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// repoOrderForOrg returns a sorted list of repo names for the given org index,
+// derived from link statuses (skipping CLAUDE.md entries). This is the single
+// source of truth for both rendering and navigation in the repos tab.
+func (m Model) repoOrderForOrg(orgIdx int) []string {
+	if orgIdx >= len(m.orgs) {
+		return nil
+	}
+	org := m.orgs[orgIdx]
+	statuses := m.statuses[org.Name]
+	seen := make(map[string]bool)
+	var repos []string
+	for _, st := range statuses {
+		if st.Skill == "CLAUDE.md" {
+			continue
+		}
+		if !seen[st.Repo] {
+			repos = append(repos, st.Repo)
+			seen[st.Repo] = true
+		}
+	}
+	sort.Strings(repos)
+	return repos
+}
+
 func (m Model) startInstallPick() (tea.Model, tea.Cmd) {
 	if len(m.available) == 0 {
 		return m, nil
 	}
 
 	org := m.orgs[m.cursor]
-	// Pick the first repo for simplicity. In future could let user pick.
-	if len(org.Repos) == 0 {
+	repoOrder := m.repoOrderForOrg(m.cursor)
+	if len(repoOrder) == 0 || m.repoCursor >= len(repoOrder) {
 		return m, nil
 	}
 
-	repo := org.Repos[0]
+	repo := repoOrder[m.repoCursor]
 	repoPath := filepath.Join(org.Path, repo)
 
 	// Find plugins not yet installed for this repo
@@ -539,7 +578,7 @@ func (m Model) renderReposTab(b *strings.Builder, org config.Org, statuses []lin
 		}
 	}
 
-	for _, repo := range repoOrder {
+	for ri, repo := range repoOrder {
 		skills := repoSkills[repo]
 		linked := 0
 		for _, s := range skills {
@@ -548,7 +587,13 @@ func (m Model) renderReposTab(b *strings.Builder, org config.Org, statuses []lin
 			}
 		}
 
-		b.WriteString(fmt.Sprintf("    %s %s\n",
+		repoCursor := "    "
+		if ri == m.repoCursor {
+			repoCursor = "  " + lipgloss.NewStyle().Foreground(colorTerracotta).Render("> ")
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s %s\n",
+			repoCursor,
 			repoStyle.Render(repo),
 			dimStyle.Render(fmt.Sprintf("(%d/%d skills)", linked, len(skills))),
 		))

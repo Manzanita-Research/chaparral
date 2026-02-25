@@ -75,6 +75,7 @@ func ScanInstalled() ([]InstalledPlugin, error) {
 				Marketplace: marketplace,
 				Version:     install.Version,
 				Scope:       install.Scope,
+				Enabled:     true,
 				ProjectPath: install.ProjectPath,
 				InstallPath: install.InstallPath,
 			})
