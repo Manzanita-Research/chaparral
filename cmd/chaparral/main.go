@@ -13,6 +13,7 @@ import (
 	"github.com/manzanita-research/chaparral/internal/discovery"
 	"github.com/manzanita-research/chaparral/internal/generator"
 	"github.com/manzanita-research/chaparral/internal/linker"
+	"github.com/manzanita-research/chaparral/internal/marketplace"
 	"github.com/manzanita-research/chaparral/internal/publisher"
 	"github.com/manzanita-research/chaparral/internal/tui"
 	"github.com/manzanita-research/chaparral/internal/validator"
@@ -105,6 +106,13 @@ func runSync(basePath string) {
 func runStatus(basePath string) {
 	orgs := loadOrgs(basePath)
 
+	// Load installed plugins once (shared across all orgs)
+	installedPlugins, pluginErr := marketplace.ScanInstalled()
+	if pluginErr != nil {
+		// Non-fatal — continue without plugin data
+		installedPlugins = nil
+	}
+
 	for _, org := range orgs {
 		fmt.Printf("%s (%s/)\n", org.Name, filepath.Base(org.Path))
 
@@ -149,8 +157,61 @@ func runStatus(basePath string) {
 			}
 			fmt.Println(strings.Join(parts, "  "))
 		}
+
+		// Show marketplace plugins per repo
+		if pluginErr != nil {
+			fmt.Printf("  marketplace plugins: could not load (%v)\n", pluginErr)
+		} else if len(installedPlugins) > 0 {
+			fmt.Println("  marketplace plugins")
+			// Show plugins grouped by repo
+			pluginsByRepo := make(map[string][]marketplace.InstalledPlugin)
+			for _, repo := range org.Repos {
+				repoPath := filepath.Join(org.Path, repo)
+				repoPlugins := marketplace.PluginsForRepo(installedPlugins, repoPath)
+				if len(repoPlugins) > 0 {
+					pluginsByRepo[repo] = repoPlugins
+				}
+			}
+
+			// Also check for user-scoped plugins (apply to all repos)
+			userPlugins := marketplace.PluginsForRepo(installedPlugins, "")
+			if len(pluginsByRepo) == 0 && len(userPlugins) == 0 {
+				fmt.Println("    none")
+			} else {
+				// Show user-scoped plugins first (apply everywhere)
+				shown := make(map[string]bool)
+				for _, p := range userPlugins {
+					icon := pluginIcon(true, true)
+					fmt.Printf("    %s %s (v%s, user)\n", icon, p.Name, p.Version)
+					shown[p.PluginID] = true
+				}
+				// Show project-scoped plugins per repo
+				for repo, plugins := range pluginsByRepo {
+					for _, p := range plugins {
+						if shown[p.PluginID] {
+							continue
+						}
+						icon := pluginIcon(true, true)
+						fmt.Printf("    %s %s (v%s, %s)\n", icon, p.Name, p.Version, repo)
+					}
+				}
+			}
+		} else {
+			fmt.Println("  marketplace plugins: none")
+		}
+
 		fmt.Println()
 	}
+}
+
+func pluginIcon(installed, enabled bool) string {
+	if installed && enabled {
+		return "✓"
+	}
+	if installed {
+		return "◐"
+	}
+	return "○"
 }
 
 func runValidate(basePath string) {
@@ -487,7 +548,7 @@ func printHelp() {
 usage:
   chaparral            launch interactive dashboard
   chaparral sync       link skills to all sibling repos
-  chaparral status     show current link state
+  chaparral status     show link state and marketplace plugins
   chaparral validate   check skill structure for errors
   chaparral generate   generate plugin manifests (dry run to stdout)
     --marketplace      also generate marketplace.json catalog
