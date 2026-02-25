@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Generation** - Users can validate and generate Claude Code plugin manifests from brand repo skills
 - [x] **Phase 2: Publishing** - Users can write and push a versioned marketplace to GitHub with explicit confirmation
 - [x] **Phase 3: Discovery and Install** - Users can see marketplace plugin status and install plugins from the TUI
-- [ ] **Phase 4: Polish** - Fix display bugs and UX issues found during milestone audit
+- [x] **Phase 4: Polish** - Fix display bugs and UX issues found during milestone audit (completed 2026-02-25)
 
 ## Phase Details
 
@@ -79,4 +79,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Generation | 2/2 | Complete | 2026-02-24 |
 | 2. Publishing | 2/2 | Complete | 2026-02-24 |
 | 3. Discovery and Install | 2/2 | Complete | 2026-02-25 |
-| 4. Polish | 0/1 | Not started | - |
+| 4. Polish | 0/1 | Complete    | 2026-02-25 |
