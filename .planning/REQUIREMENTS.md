@@ -23,8 +23,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Discovery
 
-- [ ] **DISC-01**: Chaparral scans sibling repos for installed marketplace plugins
-- [ ] **DISC-02**: Chaparral queries the published marketplace to show available plugins
+- [x] **DISC-01**: Chaparral scans sibling repos for installed marketplace plugins
+- [x] **DISC-02**: Chaparral queries the published marketplace to show available plugins
 - [ ] **DISC-03**: TUI shows marketplace plugin install status alongside local skill link status
 - [ ] **DISC-04**: User can install marketplace plugins into sibling repos from the TUI
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUB-02 | Phase 2 | Pending |
 | PUB-03 | Phase 2 | Pending |
 | PUB-04 | Phase 2 | Pending |
-| DISC-01 | Phase 3 | Pending |
-| DISC-02 | Phase 3 | Pending |
+| DISC-01 | Phase 3 | Complete |
+| DISC-02 | Phase 3 | Complete |
 | DISC-03 | Phase 3 | Pending |
 | DISC-04 | Phase 3 | Pending |
 

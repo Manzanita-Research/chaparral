@@ -52,6 +52,11 @@ var (
 	statusLinked  = skillLinked.Render("●")
 	statusMissing = skillMissing.Render("○")
 	statusStale   = skillStale.Render("◐")
+
+	// Plugin status styles
+	pluginInstalled = skillLinked.Render("●")  // sage — installed and enabled
+	pluginDisabled  = skillStale.Render("◐")   // ochre — installed but disabled
+	pluginAvailable = lavenderStyle.Render("○") // lavender — available, not installed
 )
 
 // hasNoColor checks if NO_COLOR is set in the environment.

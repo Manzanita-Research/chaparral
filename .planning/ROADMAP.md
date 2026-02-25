@@ -52,7 +52,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. The TUI shows which marketplace plugins each sibling repo has installed, alongside local skill link status
   2. User can see which plugins are available in the published marketplace from within the dashboard
   3. User can install a marketplace plugin into a sibling repo from the TUI, with full error output if the install fails
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 03-01-PLAN.md — Marketplace package: types, scanner, installer, and CLI status integration (TDD)
+- [ ] 03-02-PLAN.md — TUI integration: plugin display in repos tab and interactive install flow
 
 ## Progress
 
