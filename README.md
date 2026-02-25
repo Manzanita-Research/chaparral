@@ -62,7 +62,7 @@ go build -o chaparral ./cmd/chaparral
 chaparral
 ```
 
-Launch the interactive dashboard. Toggle between skills view and repos view with `tab`. See all your orgs at a glance, sync interactively, check link health.
+Launch the interactive dashboard. Toggle between skills view and repos view with `tab`. Navigate with `j`/`k`, sync with `s` or `enter`, install marketplace plugins with `i` from the repos view.
 
 ### Sync everything
 
@@ -78,7 +78,34 @@ Discovers all org directories, finds brand repos (by `chaparral.json`), and link
 chaparral status
 ```
 
-Shows what's linked, what's stale, what's new and unlinked.
+Shows what's linked, what's stale, what's new and unlinked. Also shows installed marketplace plugins per repo.
+
+### Validate skills
+
+```bash
+chaparral validate
+```
+
+Checks skill structure for errors and warnings — missing SKILL.md, bad frontmatter, etc.
+
+### Generate plugin manifests
+
+```bash
+chaparral generate
+chaparral generate --marketplace
+```
+
+Generates `plugin.json` manifests for each skill (dry run to stdout). With `--marketplace`, also generates the `marketplace.json` catalog.
+
+### Publish to marketplace
+
+```bash
+chaparral publish
+chaparral publish --check
+chaparral publish --write-only
+```
+
+Writes plugin manifests and pushes your marketplace to GitHub. Use `--check` to see if local skills are newer than published. Use `--write-only` to write manifests without pushing.
 
 ### Clean up
 
@@ -131,14 +158,13 @@ Chaparral and Claude Code's plugin marketplace are complementary:
 | **Best for** | Active development, fast iteration | Stable distribution to others |
 | **Scope** | Org directory | Per-user or per-project |
 
-Chaparral is your workbench. The marketplace is your storefront. Develop locally with symlinks, publish via marketplace when stable.
+Chaparral is your workbench. The marketplace is your storefront. Develop locally with symlinks, then run `chaparral publish` to push them to your marketplace when they're stable.
 
 ## What it doesn't do
 
-- No file copying. Symlinks only. One source of truth.
-- No git operations. It doesn't pull, push, or commit anything.
+- No file copying for sync. Symlinks only. One source of truth.
 - No global installs into `~/.claude/`. Everything stays org-scoped.
-- No magic. It creates symlinks and tells you what it did.
+- No magic. It creates symlinks and tells you what it did. Publishing is the one exception — `publish` writes manifests and pushes to GitHub, but only when you ask.
 
 ## Named for
 

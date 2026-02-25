@@ -40,11 +40,11 @@ We built this because we needed it. Manzanita Research has a growing family of p
 
 We also care about the shape of the tool. Chaparral isn't a platform or a framework. It's a small program that creates symlinks and tells you what it did. That restraint is intentional.
 
-## Where this is going
+## Where it is now
 
-What works now: the TUI dashboard with skills and repos views, `sync` / `status` / `unlink` commands, multi-org discovery, manifest-driven configuration. It's functional and we use it daily.
+The full loop works: sync skills locally with symlinks, validate their structure, generate plugin manifests, and publish to a Claude Code marketplace — all from the same tool. The TUI shows both local symlink status and installed marketplace plugins in one view, and you can install plugins directly from the dashboard.
 
-What's next: marketplace bridge — the ability to generate a `marketplace.json` from a brand repo, turning local skills into publishable Claude Code plugins when they're stable. This closes the loop between local development and distribution. We want the TUI to show both symlink status and installed marketplace plugin status in one view.
+Commands: `sync`, `status`, `validate`, `generate`, `publish`, `unlink`. The dashboard is the default.
 
 What's still a question: how far to take the dashboard. Right now it's a status-and-sync tool. It could grow into something that helps you author and test skills, visualize dependencies between them, or manage skill versions. We're not sure yet. We're using it and seeing what we reach for.
 
