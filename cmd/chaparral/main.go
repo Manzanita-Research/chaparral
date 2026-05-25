@@ -574,15 +574,15 @@ func printHelp() {
 
 usage:
   chaparral            launch interactive dashboard
-  chaparral sync       link skills to all sibling repos
-  chaparral status     show link state and marketplace plugins
+  chaparral sync       link skills and output styles to all sibling repos
+  chaparral status     show link state, output styles, and marketplace plugins
   chaparral validate   check skill structure for errors
   chaparral generate   generate plugin manifests (dry run to stdout)
     --marketplace      also generate marketplace.json catalog
   chaparral publish    write manifests and push marketplace to GitHub
     --check            check if local skills are newer than published
     --write-only       write manifests without pushing to GitHub
-  chaparral unlink     remove all managed symlinks
+  chaparral unlink     remove all managed symlinks (skills + output styles)
   chaparral help       show this message`)
 }
 

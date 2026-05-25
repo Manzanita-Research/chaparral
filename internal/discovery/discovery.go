@@ -119,6 +119,28 @@ func FindSkills(skillsDir string) ([]config.Skill, error) {
 	return skills, nil
 }
 
+// FindOutputStyles returns all output style .md files in a styles directory.
+func FindOutputStyles(stylesDir string) ([]config.OutputStyle, error) {
+	entries, err := os.ReadDir(stylesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var styles []config.OutputStyle
+	for _, entry := range entries {
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if strings.HasSuffix(entry.Name(), ".md") {
+			styles = append(styles, config.OutputStyle{
+				Name: entry.Name(),
+				Path: filepath.Join(stylesDir, entry.Name()),
+			})
+		}
+	}
+	return styles, nil
+}
+
 func isRepo(path string) bool {
 	gitDir := filepath.Join(path, ".git")
 	if info, err := os.Stat(gitDir); err == nil && info.IsDir() {

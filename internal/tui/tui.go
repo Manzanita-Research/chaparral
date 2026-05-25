@@ -38,20 +38,20 @@ const (
 )
 
 type Model struct {
-	basePath string
-	orgs     []config.Org
-	statuses map[string][]linker.LinkStatus // keyed by org name
-	results  []linker.LinkResult
+	basePath   string
+	orgs       []config.Org
+	statuses   map[string][]linker.LinkStatus // keyed by org name
+	results    []linker.LinkResult
 	cursor     int
 	repoCursor int
 	view       view
-	prevView view // view to return to from help
-	tab      dashTab
-	err      error
-	width    int
-	height   int
-	spinner  spinner.Model
-	noColor  bool
+	prevView   view // view to return to from help
+	tab        dashTab
+	err        error
+	width      int
+	height     int
+	spinner    spinner.Model
+	noColor    bool
 
 	// Plugin data
 	plugins      []marketplace.InstalledPlugin
@@ -496,10 +496,16 @@ func (m Model) renderSkillsTab(b *strings.Builder, org config.Org, statuses []li
 		}
 	}
 
-	// Group by skill
+	// Separate skills (directories) from output styles (.md files in output-styles)
 	skillRepos := make(map[string][]linker.LinkStatus)
+	styleRepos := make(map[string][]linker.LinkStatus)
 	for _, st := range statuses {
-		if st.Skill != "CLAUDE.md" {
+		if st.Skill == "CLAUDE.md" {
+			continue
+		}
+		if strings.HasSuffix(st.Skill, ".md") {
+			styleRepos[st.Skill] = append(styleRepos[st.Skill], st)
+		} else {
 			skillRepos[st.Skill] = append(skillRepos[st.Skill], st)
 		}
 	}
@@ -536,6 +542,40 @@ func (m Model) renderSkillsTab(b *strings.Builder, org config.Org, statuses []li
 
 	if len(skillRepos) == 0 && len(statuses) <= 1 {
 		b.WriteString("    " + dimStyle.Render("no skills found") + "\n")
+	}
+
+	// Output styles section
+	if len(styleRepos) > 0 {
+		b.WriteString("    " + dimStyle.Render("output styles") + "\n")
+		styleNames := make([]string, 0, len(styleRepos))
+		for name := range styleRepos {
+			styleNames = append(styleNames, name)
+		}
+		sort.Strings(styleNames)
+
+		for _, style := range styleNames {
+			repos := styleRepos[style]
+			linked := 0
+			total := len(repos)
+			for _, r := range repos {
+				if r.State == "linked" {
+					linked++
+				}
+			}
+
+			icon := statusLinked
+			if linked == 0 {
+				icon = statusMissing
+			} else if linked < total {
+				icon = statusStale
+			}
+
+			b.WriteString(fmt.Sprintf("      %s %s %s\n",
+				icon,
+				repoStyle.Render(style),
+				dimStyle.Render(fmt.Sprintf("(%d/%d repos)", linked, total)),
+			))
+		}
 	}
 
 	// Marketplace summary
@@ -580,11 +620,26 @@ func (m Model) renderReposTab(b *strings.Builder, org config.Org, statuses []lin
 
 	for ri, repo := range repoOrder {
 		skills := repoSkills[repo]
+		// Separate skills from output styles
+		var repoSkillStatuses, repoStyleStatuses []linker.LinkStatus
+		for _, s := range skills {
+			if strings.HasSuffix(s.Skill, ".md") {
+				repoStyleStatuses = append(repoStyleStatuses, s)
+			} else {
+				repoSkillStatuses = append(repoSkillStatuses, s)
+			}
+		}
+
 		linked := 0
 		for _, s := range skills {
 			if s.State == "linked" {
 				linked++
 			}
+		}
+
+		label := "skills"
+		if len(repoStyleStatuses) > 0 {
+			label = "resources"
 		}
 
 		repoCursor := "    "
@@ -595,12 +650,20 @@ func (m Model) renderReposTab(b *strings.Builder, org config.Org, statuses []lin
 		b.WriteString(fmt.Sprintf("%s%s %s\n",
 			repoCursor,
 			repoStyle.Render(repo),
-			dimStyle.Render(fmt.Sprintf("(%d/%d skills)", linked, len(skills))),
+			dimStyle.Render(fmt.Sprintf("(%d/%d %s)", linked, len(skills), label)),
 		))
 
-		for _, s := range skills {
+		for _, s := range repoSkillStatuses {
 			icon := statusIcon(s.State)
 			b.WriteString(fmt.Sprintf("      %s %s\n", icon, dimStyle.Render(s.Skill)))
+		}
+
+		if len(repoStyleStatuses) > 0 {
+			b.WriteString("      " + dimStyle.Render("output styles") + "\n")
+			for _, s := range repoStyleStatuses {
+				icon := statusIcon(s.State)
+				b.WriteString(fmt.Sprintf("        %s %s\n", icon, dimStyle.Render(s.Skill)))
+			}
 		}
 
 		// Show plugins for this repo

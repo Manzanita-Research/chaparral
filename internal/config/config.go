@@ -9,17 +9,18 @@ import (
 
 // Manifest represents a chaparral.json file in a brand repo.
 type Manifest struct {
-	Org       string   `json:"org"`
-	ClaudeMD  string   `json:"claude_md"`
-	SkillsDir string   `json:"skills_dir"`
-	Exclude   []string `json:"exclude"`
+	Org             string   `json:"org"`
+	ClaudeMD        string   `json:"claude_md"`
+	SkillsDir       string   `json:"skills_dir"`
+	OutputStylesDir string   `json:"output_styles_dir"`
+	Exclude         []string `json:"exclude"`
 }
 
 // Org represents a discovered organization directory.
 type Org struct {
 	Name      string
-	Path      string   // absolute path to org directory
-	BrandRepo string   // name of the brand repo within the org
+	Path      string // absolute path to org directory
+	BrandRepo string // name of the brand repo within the org
 	Manifest  Manifest
 	Repos     []string // sibling repo names (excluding brand and excluded)
 }
@@ -28,6 +29,12 @@ type Org struct {
 type Skill struct {
 	Name string
 	Path string // absolute path to the skill directory
+}
+
+// OutputStyle represents a single output style file.
+type OutputStyle struct {
+	Name string
+	Path string // absolute path to the .md file
 }
 
 // LoadManifest reads and parses a chaparral.json file.
@@ -48,6 +55,11 @@ func LoadManifest(path string) (Manifest, error) {
 // SkillsPath returns the absolute path to the skills directory.
 func (o *Org) SkillsPath() string {
 	return filepath.Join(o.Path, o.BrandRepo, o.Manifest.SkillsDir)
+}
+
+// OutputStylesPath returns the absolute path to the output styles directory.
+func (o *Org) OutputStylesPath() string {
+	return filepath.Join(o.Path, o.BrandRepo, o.Manifest.OutputStylesDir)
 }
 
 // ClaudeMDPath returns the absolute path to the org-level CLAUDE.md.

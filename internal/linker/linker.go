@@ -11,10 +11,10 @@ import (
 
 // LinkResult describes what happened for a single link operation.
 type LinkResult struct {
-	Repo    string
-	Skill   string
-	Action  string // "created", "exists", "updated", "skipped", "error"
-	Detail  string
+	Repo   string
+	Skill  string
+	Action string // "created", "exists", "updated", "skipped", "error"
+	Detail string
 }
 
 // SyncOrg links all skills and the org CLAUDE.md for a given org.
@@ -36,6 +36,19 @@ func SyncOrg(org config.Org) ([]LinkResult, error) {
 		for _, skill := range skills {
 			result := linkSkill(org, repo, skill)
 			results = append(results, result)
+		}
+	}
+
+	// Find and link output styles
+	if org.Manifest.OutputStylesDir != "" {
+		styles, err := discovery.FindOutputStyles(org.OutputStylesPath())
+		if err == nil {
+			for _, repo := range org.Repos {
+				for _, style := range styles {
+					result := linkOutputStyle(org, repo, style)
+					results = append(results, result)
+				}
+			}
 		}
 	}
 
@@ -73,14 +86,32 @@ func UnlinkOrg(org config.Org) ([]LinkResult, error) {
 		}
 	}
 
+	// Unlink output styles
+	if org.Manifest.OutputStylesDir != "" {
+		styles, err := discovery.FindOutputStyles(org.OutputStylesPath())
+		if err == nil {
+			for _, repo := range org.Repos {
+				for _, style := range styles {
+					linkPath := filepath.Join(org.Path, repo, ".claude", "output-styles", style.Name)
+					if isOurSymlink(linkPath) {
+						os.Remove(linkPath)
+						results = append(results, LinkResult{
+							Repo: repo, Skill: style.Name, Action: "removed",
+						})
+					}
+				}
+			}
+		}
+	}
+
 	return results, nil
 }
 
 // Status returns the current link state for an org without changing anything.
 type LinkStatus struct {
-	Repo      string
-	Skill     string
-	State     string // "linked", "stale", "missing", "conflict"
+	Repo       string
+	Skill      string
+	State      string // "linked", "stale", "missing", "conflict"
 	LinkTarget string
 }
 
@@ -102,6 +133,19 @@ func StatusOrg(org config.Org) ([]LinkStatus, error) {
 		for _, skill := range skills {
 			linkPath := filepath.Join(org.Path, repo, ".claude", "skills", skill.Name)
 			statuses = append(statuses, checkLink(linkPath, skill.Path, repo, skill.Name))
+		}
+	}
+
+	// Check output styles
+	if org.Manifest.OutputStylesDir != "" {
+		styles, err := discovery.FindOutputStyles(org.OutputStylesPath())
+		if err == nil {
+			for _, repo := range org.Repos {
+				for _, style := range styles {
+					linkPath := filepath.Join(org.Path, repo, ".claude", "output-styles", style.Name)
+					statuses = append(statuses, checkLink(linkPath, style.Path, repo, style.Name))
+				}
+			}
 		}
 	}
 
@@ -133,6 +177,19 @@ func linkSkill(org config.Org, repo string, skill config.Skill) LinkResult {
 
 	dest := filepath.Join(skillsDir, skill.Name)
 	return createSymlink(skill.Path, dest, repo, skill.Name)
+}
+
+func linkOutputStyle(org config.Org, repo string, style config.OutputStyle) LinkResult {
+	stylesDir := filepath.Join(org.Path, repo, ".claude", "output-styles")
+	if err := os.MkdirAll(stylesDir, 0755); err != nil {
+		return LinkResult{
+			Repo: repo, Skill: style.Name, Action: "error",
+			Detail: fmt.Sprintf("creating .claude/output-styles: %v", err),
+		}
+	}
+
+	dest := filepath.Join(stylesDir, style.Name)
+	return createSymlink(style.Path, dest, repo, style.Name)
 }
 
 func createSymlink(source, dest, repo, name string) LinkResult {
